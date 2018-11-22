@@ -1,0 +1,246 @@
+\documentclass{bioinfo}
+\copyrightyear{2018} \pubyear{2018}
+
+\access{Advance Access Publication Date: Day Month Year}
+\appnotes{Application Note}
+
+\begin{document}
+\firstpage{1}
+
+\subtitle{Genome Analysis}
+
+\title[short Title]{epic2 efficiently finds diffuse domains in ChIP-Seq data}
+\author[Sample \textit{et~al}.]{Endre Bakken Stovner\,$^{\text{\sfb 1,2,3,4}}$,
+  Pål Sætrom\,$^{\text{\sfb 1,2,3,4}*}$}
+\address{$^{\text{\sf 1}}$Department of Computer Science, Norwegian University of Science
+and Technology, Trondheim, 7013, Norway,
+\\
+$^{\text{\sf 2}}$Department of Clinical and Molecular Medicine, Norwegian
+University of Science and Technology, Trondheim, 7013, Norway
+\\
+$^{\text{\sf 3}}$Bioinformatics Core Facility, Norwegian University of Science and Technology, Trondheim, 7013, Norway
+\\
+$^{\text{\sf 4}}$K.G. Jebsen Center for Genetic Epidemiology, Department of Public Health and Nursing, Norwegian University of Science and Technology, Trondheim, Norway}
+
+\corresp{$^\ast$To whom correspondence should be addressed.}
+
+\history{Received on XXXXX; revised on XXXXX; accepted on XXXXX}
+
+\editor{Associate Editor: XXXXXXX}
+
+\abstract{\textbf{Summary:} As the size and number of ChIP-Seq experiments
+  quickly grow, faster methods to find peaks in ChIP-Seq data are required. The
+  SICER ChIP-Seq caller has proven adept at finding diffuse domains in ChIP-Seq
+  data, but it is slow, requires much memory, needs manual installation steps
+  and is hard to use. epic2 is a complete
+  rewrite of SICER that is focused on speed, low memory overhead and ease-of-use.\\
+  \textbf{Availability:} epic2 is freely available from https://github.com/biocore-ntnu/epic2\\
+  \textbf{Contact:} \href{paalsat@gmail.com}{paalsat@gmail.com}}
+
+\maketitle
+
+\section{Introduction}
+
+ChIP-Seq (\cite{10.1038/nrg2641}) is an experimental method used to analyze how a
+protein of interest interacts with DNA. The end result of a ChIP-Seq experiment
+is a pool of DNA fragments that bind to the protein. These fragments must be
+aligned and the alignments further analyzed to find so-called enriched regions -
+the genomic regions where the protein binds.
+
+Different algorithms are needed depending on the characteristics of the protein.
+Transcription factors (TFs) have distinct binding sites resulting in short and
+distinct peaks in the ChIP-seq data, whereas histone modifications such as
+histone 3 lysine 27 tri-methylation (H3K27me3) occur over longer regions
+resulting in diffuse and rolling hills-like signals in the data.
+
+MACS2 (\cite{10.1186/gb-2008-9-9-r137}) is a popular ChIP-Seq caller that uses the
+expected shift between peaks aligning on the Watson and Crick strand to identify
+short and punctuate to medium-size peaks. The MACS2 software also has an option
+for finding broad peaks, but this option merely links together punctuate peaks,
+which are not necessarily found in ChIP-Seq types with diffuse signals
+
+To identify such diffuse ChIP-seq signals,
+SICER (\cite{doi:10.1093/bioinformatics/btp340}) collects all ChIP bins that pass a
+score threshold for enrichment, and then merges these bins into regions. If the
+region score is higher than a threshold computed to control the statistical
+significance of regions, it becomes a candidate region. Whether this region is
+truly enriched is assesed by comparing the number of ChIP reads in the region to
+the number of background (input) reads. The resulting p-values are finally
+false discovery rate (FDR) controlled to adjust for multiple testing.
+
+Benchmarks have shown that SICER is one of the best tools for finding diffuse
+ChIP-seq signals (\cite{doi:10.1093/bib/bbv110}); however, the SICER software is
+cumbersome, slow, and has high memory requirements, making SICER impractical for
+large-scale data analyses. To address these shortcomings, we have created epic2,
+which is a complete reimplementation of SICER. The epic2 software is about 30
+times faster and uses less than 1/7 of the memory of SICER on relevant
+genome-scale ChIP-seq data.
+
+%\enlargethispage{12pt}
+
+\section{Improvements and new features}
+
+The SICER algorithm’s memory requirements are due to binning the genome and
+counting the number of reads per bin, whereas its running time depends on the
+number of input reads and genomic bins. To improve on the original Python
+implementation of SICER, we decided to use Cython, as this language is
+compatible with Python 2 and 3, gives the running time performance of compiled
+languages, and provides additional data type control. Specifically, whereas
+Python lists of integers use about 8 unaligned bytes per element on 64 bit CPUs,
+strong and distinct peaks in ChIP-seq experiments typically have read depths of
+less than 10000 \cite{doi:10.1093/nar/gkq1187}. Our Cython implementation
+therefore uses 16 bit integers for storing bin counts. As the majority of the
+runtime is used to read data into memory, the parsers for supported input file
+formats are written in Cython and C++. In addition, we have arranged the data
+contiguously to ensure memory-locality and fast iteration.
+
+We benchmarked our epic2 implementation on an in-house dataset of H3K27me3
+ChIP-seq data. Varying the amount of input data revealed that epic2 was up to
+32 and 6 times faster than SICER and MACS2, respectively (Fig. 1A). Moreover,
+epic2 used less than 1/7 and 1/2 as much memory as SICER and MACS2 (Fig. 1B).
+
+In addition to these performance improvements, we made our implementation easy
+to install and use from the command line on single and paired-end data in bam,
+sam and both regular and gzipped bed and bedpe file formats. Furthermore, we
+have added new features that makes epic2 easy to use both with existing genomes
+and custom genomes and assemblies. For example, epic2 detects the readlength, by
+which it can automatically choose the appropriate precomputed effective genome
+fraction for the genome chosen. A complete list of new features in epic2 is
+available at https://github.com/biocore-ntnu/epic2
+
+
+% \begin{methods}
+\section{Conclusion}
+
+epic2 is a fast, low-memory, easy to use and install reimplementation of the
+extremely popular SICER ChIP-Seq caller. As ChIP-Seq is a fundamental technology
+for investingating epigenetic marks we expect epic2 to be of great use for
+researchers.
+
+\begin{thebibliography}{}
+
+\bibitem[Steinhauser {\it et~al}., 2016]{doi:10.1093/bib/bbv110}
+Steinhauser, S. and Kurzawa, N. and Eils, R. and Herrmann, C. (2016) A comprehensive comparison of tools for differential ChIP-seq analysis, {\it Briefings in Bioinformatics}, {\bf 17}, 953-966.
+
+\bibitem[Zang {\it et~al}., 2009]{doi:10.1093/bioinformatics/btp340}
+Zang, C., Schones D. E., Zeng C., Cui K. Zhao, K. and Peng W. (2009), A
+clustering approach for identification of enriched domains from histone
+modification ChIP-Seq data, {\it Bioinformatics}, {\bf 25}, 1952-1958
+
+\bibitem[Zhang {\it et~al}., 2008]{10.1186/gb-2008-9-9-r137}
+Zhang Y., Liu T., Meyer C. A., Eeckhoute J., Johnson, D. S., Bernstein B. E., Nusbaum C., Myers Richard M., Brown M., Li W., Liu X. S.
+(2008), Model-based Analysis of ChIP-Seq (MACS), {\it Genome Biology}, {\bf 9}, R137
+
+\bibitem[Park, 2009]{10.1038/nrg2641}
+Park, Peter J. (2009), ChIP-Seq: advantages and challenges of a maturing
+technology, {\it Nature Reviews Genetics}, {\bf 10}, 669EP
+
+\bibitem[Rye {\it et~al}., 2011]{doi:10.1093/nar/gkq1187}
+Rye M. B. and Sætrom P., and Drabløs F. (2011), A manually curated ChIP-seq benchmark demonstrates room for improvement in current peak-finder programs,
+{\it Nucleic Acids Research}, {\bf 339}, e25
+
+\end{thebibliography}
+\end{document}
+
+% @article{doi:10.1093/nar/gkq1187,
+% author = {Rye, Morten Beck and Sætrom, Pål and Drabløs, Finn},
+% title = {A manually curated ChIP-seq benchmark demonstrates room for improvement in current peak-finder programs},
+% journal = {Nucleic Acids Research},
+% volume = {39},
+% number = {4},
+% pages = {e25},
+% year = {2011},
+% doi = {10.1093/nar/gkq1187},
+% URL = {http://dx.doi.org/10.1093/nar/gkq1187},
+% eprint = {/oup/backfile/content_public/journal/nar/39/4/10.1093_nar_gkq1187/2/gkq1187.pdf}
+% }
+
+% @article{10.1038/nrg2641,
+% author = {Park, Peter J.},
+% title = {ChIP-Seq: advantages and challenges of a maturing technology},
+% journal = {Nature Reviews Genetics},
+% year = {2009},
+% volume = {10},
+% pages = {669 EP},
+% month = {09},
+% day = {08},
+% doi = {http://dx.doi.org/10.1038/nrg2641},
+% }
+
+% @article{10.1371/journal.pcbi.1003501,
+% author = {Mahony S and Edwards MD and Mazzoni EO and Sherwood RI and Kakumanu A and Morrison CA and et al.},
+% title = {An Integrated Model of Multiple-Condition ChIP-Seq Data Reveals Predeterminants of Cdx2 Binding},
+% journal = {PLoS Comput Biol},
+% year = {2014},
+% volume = {10},
+% doi = {https://doi.org/10.1371/journal.pcbi.1003501}
+% }
+
+% @article {10.1101/207092,
+% 	author = {Gr{\"u}ning, Bj{\"o}rn and Dale, Ryan and Sj{\"o}din, Andreas and Rowe, Jillian and Chapman, Brad A. and Tomkins-Tinch, Christopher H. and Valieris, Renan and K{\"o}ster, Johannes},
+% 	title = {Bioconda: A sustainable and comprehensive software distribution for the life sciences},
+% 	year = {2017},
+% 	doi = {10.1101/207092},
+% 	publisher = {Cold Spring Harbor Laboratory},
+% 	abstract = {We present Bioconda (https://bioconda.github.io), a distribution of bioinformatics software for the lightweight, multi-platform and language-agnostic package manager Conda. Currently, Bioconda offers a collection of over 3000 software packages, which is continuously maintained, updated, and extended by a growing global community of more than 200 contributors. Bioconda improves analysis reproducibility by allowing users to define isolated environments with defined software versions, all of which are easily installed and managed without administrative privileges.},
+% 	URL = {https://www.biorxiv.org/content/early/2017/10/27/207092},
+% 	eprint = {https://www.biorxiv.org/content/early/2017/10/27/207092.full.pdf},
+% 	journal = {bioRxiv}
+% }
+
+% @article{doi:10.1093/bioinformatics/btr011,
+% author = {Marçais, Guillaume and Kingsford, Carl},
+% title = {A fast, lock-free approach for efficient parallel counting of occurrences of k-mers},
+% journal = {Bioinformatics},
+% volume = {27},
+% number = {6},
+% pages = {764-770},
+% year = {2011},
+% doi = {10.1093/bioinformatics/btr011},
+% URL = { + http://dx.doi.org/10.1093/bioinformatics/btr011},
+% eprint = {/oup/backfile/content_public/journal/bioinformatics/27/6/10.1093_bioinformatics_btr011/2/btr011.pdf}
+% }
+
+% @article{doi:10.1093/nar/gkv007,
+% author = {Ritchie, Matthew E. and Phipson, Belinda and Wu, Di and Hu, Yifang and Law, Charity W. and Shi, Wei and Smyth, Gordon K.},
+% title = {limma powers differential expression analyses for RNA-sequencing and microarray studies},
+% journal = {Nucleic Acids Research},
+% volume = {43},
+% number = {7},
+% pages = {e47},
+% year = {2015},
+% doi = {10.1093/nar/gkv007},
+% URL = { + http://dx.doi.org/10.1093/nar/gkv007},
+% eprint = {/oup/backfile/content_public/journal/nar/43/7/10.1093_nar_gkv007/2/gkv007.pdf}
+% }
+
+% @article{doi:10.1038/nature10730,
+% author = {Ross-Innes, Caryn S. and Stark, Rory and Teschendorff, Andrew E. and Holmes, Kelly A. and Ali, H. Raza and Dunning, Mark J. and Brown, Gordon D. and Gojis, Ondrej and Ellis, Ian O. and Green, Andrew R. and Ali, Simak and Chin, Suet-Feung and Palmieri, Carlo and Caldas, Carlos and Carroll, Jason S.},
+% title = {Differential oestrogen receptor binding is associated with clinical outcome in breast cancer},
+% journal = {Nature},
+% year = 2012,
+% volume = 481,
+% doi = {10.1038/nature10730}}
+
+% @article{doi:10.1038/nrg2641,
+% author = {Liang, K. and Keles, S.},
+% title = {Detecting differential binding of transcription factors with ChIP-seq},
+% journal = {Bioinformatics},
+% year = {2012},
+% volume = {28},
+% pages = {121-122},
+% doi = {10.1093/bioinformatics/btr605}}
+
+
+% @article{doi:10.1093/nar/gkq1187,
+% author = {Rye, Morten Beck and Sætrom, Pål and Drabløs, Finn},
+% title = {A manually curated ChIP-seq benchmark demonstrates room for improvement in current peak-finder programs},
+% journal = {Nucleic Acids Research},
+% volume = {39},
+% number = {4},
+% pages = {e25},
+% year = {2011},
+% doi = {10.1093/nar/gkq1187},
+% URL = {http://dx.doi.org/10.1093/nar/gkq1187},
+% eprint = {/oup/backfile/content_public/journal/nar/39/4/10.1093_nar_gkq1187/2/gkq1187.pdf}
+% }
